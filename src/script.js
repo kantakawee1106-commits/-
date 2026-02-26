@@ -1,46 +1,67 @@
-// ฟังก์ชันหลักสำหรับโหลดและรันโมเดล
-async function setupModel() {
-    const statusLabel = document.getElementById('status');
-    const resultLabel = document.getElementById('result');
+<div>Teachable Machine Image Model - p5.js and ml5.js</div>
+<script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/addons/p5.dom.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/ml5@latest/dist/ml5.min.js"></script>
+<script type="text/javascript">
+  // Classifier Variable
+  let classifier;
+  // Model URL
+  let imageModelURL = './my_model/';
+  
+  // Video
+  let video;
+  let flippedVideo;
+  // To store the classification
+  let label = "";
 
-    try {
-        statusLabel.innerText = "⏳ กำลังโหลดโมเดลจาก GitHub...";
+  // Load the model first
+  function preload() {
+    classifier = ml5.imageClassifier(imageModelURL + 'model.json');
+  }
 
-        /**
-         * สำคัญมาก: Path ต้องตรงกับโครงสร้างบน GitHub
-         * หาก index.html อยู่ที่ root และ model.json อยู่ในโฟลเดอร์ model
-         * ให้ใช้ path ว่า 'model/model.json'
-         */
-        const modelPath = 'model/model.json';
-        
-        // โหลดโมเดล (Layers Model)
-        const model = await tf.loadLayersModel(modelPath);
+  function setup() {
+    createCanvas(320, 260);
+    // Create the video
+    video = createCapture(VIDEO);
+    video.size(320, 240);
+    video.hide();
 
-        statusLabel.innerText = "✅ โหลดโมเดลสำเร็จแล้ว!";
-        statusLabel.style.color = "green";
+    flippedVideo = ml5.flipImage(video);
+    // Start classifying
+    classifyVideo();
+  }
 
-        // --- ตัวอย่างการทำ Prediction (ปลดคอมเมนต์เพื่อทดสอบ) ---
-        /*
-        const dummyInput = tf.tensor2d([1.0], [1, 1]); // ปรับตาม shape ของโมเดลคุณ
-        const prediction = model.predict(dummyInput);
-        const data = await prediction.data();
-        resultLabel.innerText = "ผลลัพธ์การทดสอบ: " + data[0];
-        */
+  function draw() {
+    background(0);
+    // Draw the video
+    image(flippedVideo, 0, 0);
 
-    } catch (error) {
-        statusLabel.innerText = "❌ เกิดข้อผิดพลาด!";
-        statusLabel.style.color = "red";
-        console.error("รายละเอียด Error:", error);
-        
-        // คำแนะนำเมื่อเกิด Error
-        resultLabel.innerHTML = `
-            <small style="color: gray;">
-                คำแนะนำ: ตรวจสอบว่าไฟล์ <b>model/model.json</b> และไฟล์ <b>.bin</b> 
-                อัปโหลดขึ้น GitHub ครบถ้วนแล้วหรือยัง?
-            </small>
-        `;
+    // Draw the label
+    fill(255);
+    textSize(16);
+    textAlign(CENTER);
+    text(label, width / 2, height - 4);
+  }
+
+  // Get a prediction for the current video frame
+  function classifyVideo() {
+    flippedVideo = ml5.flipImage(video)
+    classifier.classify(flippedVideo, gotResult);
+    flippedVideo.remove();
+
+  }
+
+  // When we get a result
+  function gotResult(error, results) {
+    // If there is an error
+    if (error) {
+      console.error(error);
+      return;
     }
-}
-
-// เริ่มการทำงานเมื่อหน้าเว็บโหลดเสร็จ
-window.onload = setupModel;
+    // The results are in an array ordered by confidence.
+    // console.log(results[0]);
+    label = results[0].label;
+    // Classifiy again!
+    classifyVideo();
+  }
+</script>
